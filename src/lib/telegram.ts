@@ -102,15 +102,28 @@ export const initTelegramApp = () => {
 
 // Check if running strictly inside Telegram
 export const isInsideTelegram = (): boolean => {
+  if (typeof window === 'undefined') return false;
+
   const webApp = getTelegramWebApp();
-  if (!webApp) return false;
-  // If there's valid initData or user object
-  if (webApp.initData && webApp.initData.length > 0) {
+  if (webApp) {
+    if (webApp.initData && webApp.initData.length > 0) return true;
+    if (webApp.initDataUnsafe?.user?.id) return true;
+    if (webApp.platform && webApp.platform !== 'unknown') return true;
+  }
+
+  // Check URL fragment or query params injected by Telegram
+  const hash = window.location.hash || '';
+  const search = window.location.search || '';
+  if (hash.includes('tgWebAppData') || hash.includes('tgWebAppVersion') || search.includes('tgWebAppData')) {
     return true;
   }
-  if (webApp.initDataUnsafe?.user?.id) {
+
+  // Check Telegram User Agent
+  const ua = navigator.userAgent || '';
+  if (/Telegram/i.test(ua)) {
     return true;
   }
+
   return false;
 };
 
@@ -147,18 +160,43 @@ export const getActiveTelegramUser = (): TelegramUser | null => {
 // Get current initData string (or simulated header)
 export const getTelegramInitData = (): string => {
   const tg = getTelegramWebApp();
+
+  // 1. Direct WebApp initData string
   if (tg?.initData && tg.initData.length > 0) {
     return tg.initData;
   }
+
+  // 2. Extract from URL hash fragment if Telegram injected it into location
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const hash = window.location.hash.substring(1);
+    const hashParams = new URLSearchParams(hash);
+    const tgWebAppData = hashParams.get('tgWebAppData');
+    if (tgWebAppData) {
+      return tgWebAppData;
+    }
+  }
+
+  // 3. Fallback: Reconstruct from initDataUnsafe if user object is present
+  if (tg?.initDataUnsafe?.user?.id) {
+    const params = new URLSearchParams();
+    params.set('user', JSON.stringify(tg.initDataUnsafe.user));
+    if (tg.initDataUnsafe.auth_date) params.set('auth_date', tg.initDataUnsafe.auth_date.toString());
+    if (tg.initDataUnsafe.query_id) params.set('query_id', tg.initDataUnsafe.query_id);
+    if (tg.initDataUnsafe.hash) params.set('hash', tg.initDataUnsafe.hash);
+    if (tg.initDataUnsafe.start_param) params.set('start_param', tg.initDataUnsafe.start_param);
+    return params.toString();
+  }
+
+  // 4. Dev simulator mode
   const devUser = getDevTelegramUser();
   if (devUser) {
-    // Provide simulated initData encoded string for dev mode
     const params = new URLSearchParams();
     params.set('user', JSON.stringify(devUser));
     params.set('auth_date', Math.floor(Date.now() / 1000).toString());
     params.set('is_dev_simulator', 'true');
     return params.toString();
   }
+
   return '';
 };
 

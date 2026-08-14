@@ -21,6 +21,17 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+  // CORS & Security headers for Telegram WebApps
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Telegram-Init-Data, Accept');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   // Basic request logger
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) {
@@ -40,6 +51,26 @@ async function startServer() {
 
   // Mount API Routes FIRST
   app.use('/api', apiRouter);
+
+  // Fallback for unmatched API routes - ALWAYS return JSON, never HTML
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      error: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+    });
+  });
+
+  // Global error handler for API routes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled server error:', err);
+    if (req.path.startsWith('/api') || req.xhr || req.headers.accept?.includes('json')) {
+      return res.status(500).json({
+        success: false,
+        error: err.message || 'Internal Server Error',
+      });
+    }
+    next(err);
+  });
 
   // Vite middleware setup (development vs production)
   if (process.env.NODE_ENV !== 'production') {

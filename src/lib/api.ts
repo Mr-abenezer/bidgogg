@@ -25,6 +25,7 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   const initData = getTelegramInitData();
 
   const headers: Record<string, string> = {
+    'Accept': 'application/json',
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
@@ -39,16 +40,40 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
       headers,
     });
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/json')) {
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error || data.message || `Server error (${response.status})`,
+        };
+      }
+      return data;
+    }
+
+    // Non-JSON response received (e.g. HTML error page or proxy gateway response)
+    const rawText = await response.text();
     if (!response.ok) {
       return {
         success: false,
-        error: data.error || data.message || `Request failed (${response.status})`,
+        error: `Server responded with status ${response.status}. Please check connection or reload.`,
       };
     }
 
-    return data;
+    // In case an endpoint unexpectedly returned text instead of JSON
+    try {
+      const parsed = JSON.parse(rawText);
+      return parsed;
+    } catch {
+      return {
+        success: false,
+        error: 'Invalid response format from server. Please try again.',
+      };
+    }
   } catch (err: any) {
+    console.error(`[API Error] ${endpoint}:`, err);
     return {
       success: false,
       error: err.message || 'Network communication error',

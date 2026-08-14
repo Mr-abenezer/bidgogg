@@ -83,15 +83,28 @@ export default function App() {
       setError(null);
 
       // Authenticate / fetch profile & wallet
+      let userData: User | null = null;
+      let walletData: Wallet | null = null;
+
       const meRes = await api.getMe();
-      if (!meRes.success || !meRes.data) {
-        setError(meRes.error || 'Failed to authenticate with Telegram session');
-        setIsLoading(false);
-        return;
+      if (meRes.success && meRes.data) {
+        userData = meRes.data.user;
+        walletData = meRes.data.wallet;
+      } else {
+        // Attempt auth fallback
+        const authRes = await api.auth();
+        if (authRes.success && authRes.data) {
+          userData = authRes.data.user;
+          walletData = authRes.data.wallet;
+        } else {
+          setError(meRes.error || authRes.error || 'Failed to establish Telegram session');
+          setIsLoading(false);
+          return;
+        }
       }
 
-      setUser(meRes.data.user);
-      setWallet(meRes.data.wallet);
+      setUser(userData);
+      setWallet(walletData);
 
       // Fetch supplementary data in parallel
       const [
@@ -195,19 +208,29 @@ export default function App() {
         <div className="p-4 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 mb-4 relative z-10">
           <AlertTriangle className="w-8 h-8" />
         </div>
-        <h2 className="text-lg font-bold mb-2 text-white relative z-10">Connection Error</h2>
-        <p className="text-xs text-white/50 max-w-sm mb-6 leading-relaxed relative z-10">
+        <h2 className="text-lg font-bold mb-2 text-white relative z-10">Session Connection</h2>
+        <p className="text-xs text-white/60 max-w-sm mb-6 leading-relaxed relative z-10">
           {error || 'Unable to establish secure session with Bid X servers.'}
         </p>
-        <button
-          onClick={() => {
-            setIsLoading(true);
-            loadAppData();
-          }}
-          className="px-6 py-2.5 rounded-xl neon-bg-orange text-black font-black text-xs uppercase tracking-tight active:scale-95 transition-all relative z-10"
-        >
-          Try Again
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 relative z-10">
+          <button
+            onClick={() => {
+              setIsLoading(true);
+              loadAppData();
+            }}
+            className="px-6 py-2.5 rounded-xl neon-bg-orange text-black font-black text-xs uppercase tracking-tight active:scale-95 transition-all shadow-[0_0_15px_rgba(242,125,38,0.3)]"
+          >
+            Retry Connection
+          </button>
+          <button
+            onClick={() => {
+              window.location.reload();
+            }}
+            className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 text-xs font-semibold tracking-tight active:scale-95 transition-all"
+          >
+            Reload Mini App
+          </button>
+        </div>
       </div>
     );
   }
