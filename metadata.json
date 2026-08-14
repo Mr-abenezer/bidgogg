@@ -1,0 +1,6 @@
+{
+  "name": "Bid X",
+  "description": "Production-ready Telegram Mini App for earning coins, watching ads, completing tasks, realtime Bid & Win rounds, and USDT withdrawals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --tg-theme-bg-color: #050505;
+    --tg-theme-text-color: #f0f0f0;
+    --tg-theme-hint-color: #737373;
+    --tg-theme-link-color: #f27d26;
+    --tg-theme-button-color: #f27d26;
+    --tg-theme-button-text-color: #000000;
+    --tg-theme-secondary-bg-color: #121212;
+  }
+
+  body {
+    background-color: #050505;
+    color: #f0f0f0;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Glass Card & Immersive UI Utility Classes */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-card-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(242, 125, 38, 0.35);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 15px rgba(242, 125, 38, 0.1);
+}
+
+.neon-glow-orange {
+  text-shadow: 0 0 15px rgba(242, 125, 38, 0.5), 0 0 30px rgba(242, 125, 38, 0.2);
+}
+
+.neon-border-orange {
+  border: 1px solid rgba(242, 125, 38, 0.4);
+  box-shadow: 0 0 15px rgba(242, 125, 38, 0.15);
+}
+
+.neon-bg-orange {
+  background: linear-gradient(135deg, #f27d26 0%, #ff4e00 100%);
+  box-shadow: 0 0 20px rgba(242, 125, 38, 0.4);
+}
+
+.neon-glow-blue {
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.35);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #a3a3a3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-orange {
+  background: linear-gradient(135deg, #f27d26 0%, #ffa858 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(242, 125, 38, 0.3), inset 0 0 15px rgba(242, 125, 38, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(242, 125, 38, 0.6), inset 0 0 20px rgba(242, 125, 38, 0.25);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
+
+
