@@ -39,6 +39,7 @@ export function validateTelegramInitData(initDataString: string): ParsedTelegram
     const userRaw = params.get('user');
     const authDateStr = params.get('auth_date');
     const isDev = params.get('is_dev_simulator');
+    const isGuest = params.get('is_guest_simulator');
 
     if (!userRaw) {
       return null;
@@ -48,8 +49,8 @@ export function validateTelegramInitData(initDataString: string): ParsedTelegram
     const authDate = authDateStr ? parseInt(authDateStr, 10) : Math.floor(Date.now() / 1000);
     const isAdmin = Number(user.id) === ADMIN_TELEGRAM_ID || Number(user.id) === 7734124559;
 
-    // If running in development simulator mode
-    if (isDev === 'true') {
+    // If running in development simulator or guest mode
+    if (isDev === 'true' || isGuest === 'true') {
       return {
         user,
         auth_date: authDate,

@@ -32,22 +32,27 @@ export const requireTelegramAuth = (req: AuthenticatedRequest, res: Response, ne
     }
   }
 
-  // Graceful fallback for browser previews or environments without direct initData
+  // Graceful fallback for preview testing: Generate unique guest identity per IP/session
+  const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+  const ipHash = Math.abs(
+    clientIp.split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0) % 900000
+  ) + 100000;
+
   const fallbackUser: TelegramUser = {
-    id: 7734124559,
-    first_name: 'Admin',
-    username: 'bidx_admin',
-    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    id: ipHash,
+    first_name: `User ${ipHash.toString().slice(-4)}`,
+    username: `user_${ipHash.toString().slice(-4)}`,
+    photo_url: undefined,
   };
 
   req.tgAuth = {
     user: fallbackUser,
     auth_date: Math.floor(Date.now() / 1000),
     is_valid: true,
-    is_admin: true,
+    is_admin: false,
   };
   req.tgUser = fallbackUser;
-  req.isAdmin = true;
+  req.isAdmin = false;
   next();
 };
 

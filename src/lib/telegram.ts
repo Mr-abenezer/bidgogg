@@ -129,6 +129,30 @@ export const isInsideTelegram = (): boolean => {
 
 // Local storage key for browser testing / dev mode simulator
 const DEV_SESSION_KEY = 'bidx_dev_telegram_user';
+const GUEST_SESSION_KEY = 'bidx_guest_device_user';
+
+// Generate or retrieve a persistent guest user for testing outside Telegram
+const getOrCreateGuestUser = (): TelegramUser => {
+  if (typeof window === 'undefined') {
+    return { id: 100001, first_name: 'Guest User', username: 'guest_user' };
+  }
+  try {
+    const raw = localStorage.getItem(GUEST_SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+
+  const randomId = Math.floor(100000000 + Math.random() * 900000000);
+  const guestUser: TelegramUser = {
+    id: randomId,
+    first_name: `User ${randomId.toString().slice(-4)}`,
+    username: `user_${randomId.toString().slice(-4)}`,
+    language_code: 'en',
+  };
+  try {
+    localStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(guestUser));
+  } catch (e) {}
+  return guestUser;
+};
 
 export const getDevTelegramUser = (): TelegramUser | null => {
   try {
@@ -148,23 +172,64 @@ export const setDevTelegramUser = (user: TelegramUser | null) => {
   }
 };
 
-// Get current Telegram User (from WebApp or dev simulator or fallback)
-export const getActiveTelegramUser = (): TelegramUser => {
+// Extract Telegram user info from all available sources
+export const extractTelegramUser = (): TelegramUser | null => {
   const tg = getTelegramWebApp();
+
+  // 1. Direct WebApp initDataUnsafe.user
   if (tg?.initDataUnsafe?.user?.id) {
     return tg.initDataUnsafe.user;
   }
+
+  // 2. Parse from window.location.hash #tgWebAppData=...
+  if (typeof window !== 'undefined' && window.location.hash) {
+    try {
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+      const tgWebAppData = hashParams.get('tgWebAppData');
+      if (tgWebAppData) {
+        const parsed = new URLSearchParams(tgWebAppData);
+        const userJson = parsed.get('user');
+        if (userJson) {
+          return JSON.parse(userJson);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed parsing hash tgWebAppData:', e);
+    }
+  }
+
+  // 3. Parse from search query
+  if (typeof window !== 'undefined' && window.location.search) {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tgWebAppData = searchParams.get('tgWebAppData');
+      if (tgWebAppData) {
+        const parsed = new URLSearchParams(tgWebAppData);
+        const userJson = parsed.get('user');
+        if (userJson) {
+          return JSON.parse(userJson);
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 4. Dev user simulator override
   const devUser = getDevTelegramUser();
   if (devUser) {
     return devUser;
   }
-  return {
-    id: 7734124559,
-    first_name: 'Admin',
-    username: 'bidx_admin',
-    last_name: 'Master',
-    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  };
+
+  return null;
+};
+
+// Get current Telegram User (with safe guest fallback for browser testing)
+export const getActiveTelegramUser = (): TelegramUser => {
+  const extracted = extractTelegramUser();
+  if (extracted) {
+    return extracted;
+  }
+  return getOrCreateGuestUser();
 };
 
 // Get current initData string (or simulated header)
@@ -172,18 +237,20 @@ export const getTelegramInitData = (): string => {
   const tg = getTelegramWebApp();
 
   // 1. Direct WebApp initData string
-  if (tg?.initData && tg.initData.length > 0) {
+  if (tg?.initData && tg.initData.trim().length > 0) {
     return tg.initData;
   }
 
   // 2. Extract from URL hash fragment if Telegram injected it into location
   if (typeof window !== 'undefined' && window.location.hash) {
-    const hash = window.location.hash.substring(1);
-    const hashParams = new URLSearchParams(hash);
-    const tgWebAppData = hashParams.get('tgWebAppData');
-    if (tgWebAppData) {
-      return tgWebAppData;
-    }
+    try {
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+      const tgWebAppData = hashParams.get('tgWebAppData');
+      if (tgWebAppData && tgWebAppData.trim().length > 0) {
+        return tgWebAppData;
+      }
+    } catch (e) {}
   }
 
   // 3. Fallback: Reconstruct from initDataUnsafe if user object is present
@@ -207,18 +274,12 @@ export const getTelegramInitData = (): string => {
     return params.toString();
   }
 
-  // 5. Guaranteed fallback for immediate seamless initialization
-  const defaultFallbackUser: TelegramUser = {
-    id: 7734124559,
-    first_name: 'Admin',
-    username: 'bidx_admin',
-    last_name: 'Master',
-    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  };
+  // 5. Unique guest user session for browser testing
+  const guestUser = getOrCreateGuestUser();
   const params = new URLSearchParams();
-  params.set('user', JSON.stringify(defaultFallbackUser));
+  params.set('user', JSON.stringify(guestUser));
   params.set('auth_date', Math.floor(Date.now() / 1000).toString());
-  params.set('is_dev_simulator', 'true');
+  params.set('is_guest_simulator', 'true');
   return params.toString();
 };
 

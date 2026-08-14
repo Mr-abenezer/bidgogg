@@ -192,14 +192,106 @@ function seedInitialData() {
 
 seedInitialData();
 
+// Helper to sync data asynchronously to Supabase when tables are created
+async function syncUserToSupabase(user: User, wallet: Wallet) {
+  if (!supabase) return;
+  try {
+    await supabase.from('users').upsert({
+      id: user.id.startsWith('usr-') ? undefined : user.id,
+      telegram_id: user.telegram_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      photo_url: user.photo_url,
+      language_code: user.language_code,
+      is_admin: user.is_admin,
+      is_banned: user.is_banned,
+      is_suspended: user.is_suspended,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'telegram_id' });
+
+    await supabase.from('wallets').upsert({
+      telegram_id: wallet.telegram_id,
+      coin_balance: wallet.coin_balance,
+      reserved_balance: wallet.reserved_balance,
+      total_earned: wallet.total_earned,
+      total_spent: wallet.total_spent,
+      today_earned: wallet.today_earned,
+      last_earned_date: wallet.last_earned_date,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'telegram_id' });
+  } catch (e) {
+    // Supabase tables might not be migrated yet
+  }
+}
+
+async function syncTransactionToSupabase(tx: Transaction) {
+  if (!supabase) return;
+  try {
+    await supabase.from('transactions').insert({
+      telegram_id: tx.telegram_id,
+      type: tx.type,
+      amount: tx.amount,
+      balance_after: tx.balance_after,
+      description: tx.description,
+      reference_id: tx.reference_id,
+      created_at: tx.created_at,
+    });
+  } catch (e) {
+    // Silent fallback
+  }
+}
+
 export const db = {
   // 1. AUTH & USER MANAGEMENT
   async getOrCreateUser(tgUser: TelegramUser): Promise<{ user: User; wallet: Wallet; isNew: boolean }> {
-    const telegramId = tgUser.id;
+    const telegramId = Number(tgUser.id);
     let user = memory.users.get(telegramId);
     let isNew = false;
 
     const isAdmin = telegramId === ADMIN_TELEGRAM_ID;
+
+    // Check Supabase if table exists and user not in memory
+    if (!user && supabase) {
+      try {
+        const { data: suUser } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+        if (suUser) {
+          const { data: suWallet } = await supabase.from('wallets').select('*').eq('telegram_id', telegramId).single();
+          user = {
+            id: suUser.id,
+            telegram_id: Number(suUser.telegram_id),
+            username: tgUser.username || suUser.username,
+            first_name: tgUser.first_name || suUser.first_name,
+            last_name: tgUser.last_name || suUser.last_name,
+            photo_url: tgUser.photo_url || suUser.photo_url,
+            language_code: tgUser.language_code || suUser.language_code,
+            is_admin: isAdmin || Boolean(suUser.is_admin),
+            is_banned: Boolean(suUser.is_banned),
+            is_suspended: Boolean(suUser.is_suspended),
+            created_at: suUser.created_at || new Date().toISOString(),
+          };
+          memory.users.set(telegramId, user);
+
+          if (suWallet) {
+            const wallet: Wallet = {
+              id: suWallet.id,
+              user_id: user.id,
+              telegram_id: telegramId,
+              coin_balance: Number(suWallet.coin_balance || 0),
+              reserved_balance: Number(suWallet.reserved_balance || 0),
+              total_earned: Number(suWallet.total_earned || 0),
+              total_spent: Number(suWallet.total_spent || 0),
+              today_earned: Number(suWallet.today_earned || 0),
+              last_earned_date: suWallet.last_earned_date || new Date().toISOString().split('T')[0],
+              updated_at: suWallet.updated_at || new Date().toISOString(),
+            };
+            memory.wallets.set(telegramId, wallet);
+          }
+        }
+      } catch (e) {
+        // Table not present yet, continue to memory flow
+      }
+    }
 
     if (!user) {
       isNew = true;
@@ -219,15 +311,16 @@ export const db = {
       memory.users.set(telegramId, user);
 
       // Create initial wallet
+      const initialBalance = isAdmin ? 5000.0 : 10.0;
       const wallet: Wallet = {
         id: 'wal-' + telegramId,
         user_id: user.id,
         telegram_id: telegramId,
-        coin_balance: 10.0, // 10 welcome Coins
+        coin_balance: initialBalance,
         reserved_balance: 0.0,
-        total_earned: 10.0,
+        total_earned: initialBalance,
         total_spent: 0.0,
-        today_earned: 10.0,
+        today_earned: initialBalance,
         last_earned_date: new Date().toISOString().split('T')[0],
         updated_at: new Date().toISOString(),
       };
@@ -239,9 +332,9 @@ export const db = {
         user_id: user.id,
         telegram_id: telegramId,
         type: 'ad_reward',
-        amount: 10.0,
-        balance_after: 10.0,
-        description: 'Welcome Bonus for joining Bid X',
+        amount: initialBalance,
+        balance_after: initialBalance,
+        description: isAdmin ? 'Admin Starting Allocation' : 'Welcome Bonus for joining Bid X',
         created_at: new Date().toISOString(),
       };
       memory.transactions.unshift(welcomeTx);
@@ -251,14 +344,18 @@ export const db = {
         id: 'notif-' + Date.now(),
         telegram_id: telegramId,
         title: 'Welcome to Bid X!',
-        message: 'You received 10 Coins welcome bonus! Start earning by watching ads or playing Bid & Win.',
+        message: isAdmin
+          ? 'Welcome Administrator! You have full platform access.'
+          : 'You received 10 Coins welcome bonus! Start earning by watching ads or playing Bid & Win.',
         type: 'reward',
         is_read: false,
         created_at: new Date().toISOString(),
       });
 
       // Send telegram bot notification if available
-      botNotify.welcome(telegramId, tgUser.first_name);
+      botNotify.welcome(telegramId, tgUser.first_name || 'User');
+      syncUserToSupabase(user, wallet);
+      syncTransactionToSupabase(welcomeTx);
     } else {
       // Update profile info if changed
       user.username = tgUser.username || user.username;
@@ -267,6 +364,10 @@ export const db = {
       user.photo_url = tgUser.photo_url || user.photo_url;
       user.is_admin = isAdmin;
       memory.users.set(telegramId, user);
+      const wallet = memory.wallets.get(telegramId);
+      if (wallet) {
+        syncUserToSupabase(user, wallet);
+      }
     }
 
     const wallet = memory.wallets.get(telegramId)!;
@@ -319,6 +420,10 @@ export const db = {
     };
 
     memory.transactions.unshift(tx);
+    if (user && wallet) {
+      syncUserToSupabase(user, wallet);
+      syncTransactionToSupabase(tx);
+    }
     return { success: true, newBalance: wallet.coin_balance };
   },
 
@@ -356,6 +461,10 @@ export const db = {
     };
 
     memory.transactions.unshift(tx);
+    if (user && wallet) {
+      syncUserToSupabase(user, wallet);
+      syncTransactionToSupabase(tx);
+    }
     return { success: true, newBalance: wallet.coin_balance };
   },
 

@@ -88,29 +88,31 @@ export default function App() {
           userData = authRes.data.user;
           walletData = authRes.data.wallet;
         } else {
-          // Provision safe local fallback
+          // Provision fallback session using actual Telegram details
+          const activeTg = getActiveTelegramUser();
+          const isAdmin = Number(activeTg.id) === 7734124559;
           userData = {
-            id: 'usr-admin-7734124559',
-            telegram_id: 7734124559,
-            username: 'bidx_admin',
-            first_name: 'Admin',
-            last_name: 'Master',
-            photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            language_code: 'en',
-            is_admin: true,
+            id: 'usr-' + activeTg.id,
+            telegram_id: activeTg.id,
+            username: activeTg.username || null,
+            first_name: activeTg.first_name || 'User',
+            last_name: activeTg.last_name || null,
+            photo_url: activeTg.photo_url || null,
+            language_code: activeTg.language_code || 'en',
+            is_admin: isAdmin,
             is_banned: false,
             is_suspended: false,
             created_at: new Date().toISOString(),
           };
           walletData = {
-            id: 'wal-admin-7734124559',
-            user_id: 'usr-admin-7734124559',
-            telegram_id: 7734124559,
-            coin_balance: 5000,
+            id: 'wal-' + activeTg.id,
+            user_id: 'usr-' + activeTg.id,
+            telegram_id: activeTg.id,
+            coin_balance: isAdmin ? 5000 : 10,
             reserved_balance: 0,
-            total_earned: 5000,
+            total_earned: isAdmin ? 5000 : 10,
             total_spent: 0,
-            today_earned: 0,
+            today_earned: isAdmin ? 0 : 10,
             last_earned_date: new Date().toISOString().split('T')[0],
             updated_at: new Date().toISOString(),
           };
