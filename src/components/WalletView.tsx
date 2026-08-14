@@ -368,31 +368,31 @@ export const WalletView: React.FC<Props> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="text-sm font-black font-mono text-[#F0F0F0]">
-                      {w.coin_amount} Coins <span className="text-emerald-400 font-sans font-bold">({w.usdt_amount} USDT)</span>
+                      {Number(w.coin_amount || 0)} Coins <span className="text-emerald-400 font-sans font-bold">({Number(w.usdt_amount || 0)} USDT)</span>
                     </div>
-                    <div className="text-[11px] text-white/40">{w.crypto_network}</div>
+                    <div className="text-[11px] text-white/40">{String(w.crypto_network || 'USDT')}</div>
                   </div>
                   {getStatusBadge(w.status)}
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 font-mono text-[11px] text-white/40 truncate">
-                  To: <span className="text-white/80">{w.wallet_address}</span>
+                  To: <span className="text-white/80">{String(w.wallet_address || '')}</span>
                 </div>
 
                 {w.tx_hash && (
                   <div className="text-[10px] text-sky-400 font-mono flex items-center gap-1">
-                    <span>TxHash: {w.tx_hash}</span>
+                    <span>TxHash: {String(w.tx_hash)}</span>
                   </div>
                 )}
 
                 {w.rejection_reason && (
                   <div className="text-[11px] text-red-400 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                    Reason: {w.rejection_reason}
+                    Reason: {String(w.rejection_reason)}
                   </div>
                 )}
 
                 <div className="text-[10px] text-white/40 font-mono text-right">
-                  {new Date(w.created_at).toLocaleString()}
+                  {new Date(w.created_at || Date.now()).toLocaleString()}
                 </div>
               </div>
             ))
@@ -410,7 +410,7 @@ export const WalletView: React.FC<Props> = ({
             </div>
           ) : (
             safeTransactions.map((tx) => {
-              const isCredit = tx.amount > 0;
+              const isCredit = (Number(tx.amount) || 0) > 0;
               return (
                 <div
                   key={tx.id}
@@ -428,14 +428,14 @@ export const WalletView: React.FC<Props> = ({
                     </div>
 
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-[#F0F0F0] truncate">{tx.description}</div>
+                      <div className="text-xs font-bold text-[#F0F0F0] truncate">{String(tx.description || 'Transaction')}</div>
                       <div className="text-[10px] text-white/40 font-mono">
-                        {new Date(tx.created_at).toLocaleString([], {
+                        {new Date(tx.created_at || Date.now()).toLocaleString([], {
                           month: 'short',
                           day: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                        })} • Bal: {tx.balance_after}
+                        })} • Bal: {Number(tx.balance_after || 0)}
                       </div>
                     </div>
                   </div>
@@ -446,7 +446,7 @@ export const WalletView: React.FC<Props> = ({
                         isCredit ? 'text-emerald-400' : 'text-white/60'
                       }`}
                     >
-                      {isCredit ? '+' : ''}{tx.amount} Coins
+                      {isCredit ? '+' : ''}{Number(tx.amount || 0)} Coins
                     </div>
                   </div>
                 </div>

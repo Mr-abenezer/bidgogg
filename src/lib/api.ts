@@ -44,10 +44,23 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     
     if (contentType.includes('application/json')) {
       const data = await response.json();
-      if (!response.ok) {
+      if (!response.ok || data.success === false) {
+        let errStr = 'An error occurred';
+        if (typeof data.error === 'string') {
+          errStr = data.error;
+        } else if (data.error && typeof data.error === 'object') {
+          errStr = data.error.message || data.error.code || JSON.stringify(data.error);
+        } else if (typeof data.message === 'string') {
+          errStr = data.message;
+        } else if (data.message && typeof data.message === 'object') {
+          errStr = data.message.message || JSON.stringify(data.message);
+        } else if (!response.ok) {
+          errStr = `Server error (${response.status})`;
+        }
         return {
           success: false,
-          error: data.error || data.message || `Server error (${response.status})`,
+          error: String(errStr),
+          data: data.data,
         };
       }
       return data;
@@ -74,9 +87,13 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     }
   } catch (err: any) {
     console.error(`[API Error] ${endpoint}:`, err);
+    let errMsg = 'Network communication error';
+    if (typeof err === 'string') errMsg = err;
+    else if (err && typeof err.message === 'string') errMsg = err.message;
+    else if (err && typeof err === 'object') errMsg = err.message || JSON.stringify(err);
     return {
       success: false,
-      error: err.message || 'Network communication error',
+      error: String(errMsg),
     };
   }
 }

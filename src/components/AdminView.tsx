@@ -56,7 +56,21 @@ type AdminSection =
 export const AdminView: React.FC<Props> = ({ onRefreshAll }) => {
   const [section, setSection] = useState<AdminSection>('analytics');
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
-  const [settings, setSettings] = useState<PlatformSettings | null>(null);
+  const [settings, setSettings] = useState<PlatformSettings>({
+    id: 1,
+    ad_reward: 5.0,
+    task_reward: 10.0,
+    click_price: 5.0,
+    min_campaign_budget: 50.0,
+    bid_amount: 10.0,
+    bid_timer_seconds: 60,
+    winner_percentage: 85,
+    platform_percentage: 15,
+    coin_to_usdt_rate: 0.0006,
+    min_withdrawal_coins: 300,
+    maintenance_mode: false,
+    updated_at: new Date().toISOString(),
+  });
   const [users, setUsers] = useState<(User & { wallet: Wallet })[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);

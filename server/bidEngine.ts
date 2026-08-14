@@ -154,19 +154,14 @@ class BidEngine {
     this.isProcessingBid = true;
 
     try {
-      if (!this.activeRound || this.activeRound.id !== roundId || this.activeRound.status !== 'active') {
+      if (!this.activeRound || this.activeRound.status !== 'active') {
         return { success: false, error: 'Round is no longer active or has completed' };
       }
 
       const now = Date.now();
       const deadlineTime = new Date(this.activeRound.deadline).getTime();
-      if (now >= deadlineTime && this.activeRound.last_bidder_id) {
+      if (now >= deadlineTime && this.activeRound.last_bidder_id && this.activeRound.seconds_left <= 0) {
         return { success: false, error: 'Round timer has expired' };
-      }
-
-      // Check if user is already the highest bidder
-      if (this.activeRound.last_bidder_id === user.id) {
-        return { success: false, error: "You are already the highest bidder! Wait for someone else to bid." };
       }
 
       const bidCost = this.activeRound.bid_cost;
@@ -185,7 +180,6 @@ class BidEngine {
       }
 
       const previousBidderId = this.activeRound.last_bidder_id;
-      const previousBidderUsername = this.activeRound.last_bidder_username;
 
       // Increment pool & update round state
       this.activeRound.total_pool = Number((this.activeRound.total_pool + bidCost).toFixed(2));

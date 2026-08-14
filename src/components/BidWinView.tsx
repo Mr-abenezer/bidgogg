@@ -72,12 +72,6 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
       return;
     }
 
-    if (round.last_bidder_id === user.telegram_id) {
-      setError("You are already the highest bidder! Wait for another user to bid.");
-      haptic.warning();
-      return;
-    }
-
     setIsBidding(true);
     setError(null);
     haptic.heavy();
@@ -92,10 +86,10 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
         // Play quick burst safely
         try {
           confetti({
-            particleCount: 35,
-            spread: 50,
+            particleCount: 40,
+            spread: 60,
             origin: { y: 0.8 },
-            colors: ['#ef4444', '#eab308', '#38bdf8'],
+            colors: ['#F27D26', '#FFD700', '#10B981'],
           });
         } catch (e) {
           // ignore canvas-confetti issues if any
@@ -103,11 +97,11 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
 
         fetchRoundState();
       } else {
-        setError(res.error || 'Failed to place bid');
+        setError(typeof res.error === 'string' ? res.error : (res.error as any)?.message || 'Failed to place bid');
         haptic.error();
       }
     } catch (err: any) {
-      setError(err.message || 'Bidding communication error');
+      setError(err?.message || 'Bidding communication error');
       haptic.error();
     } finally {
       setIsBidding(false);
@@ -252,10 +246,10 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
         {/* Main Pulsating Bid Button */}
         <button
           onClick={handlePlaceBid}
-          disabled={isBidding || isLeading}
+          disabled={isBidding}
           className={`w-full py-4 px-6 rounded-2xl font-black text-base flex items-center justify-center gap-2 transition-all uppercase tracking-tight active:scale-[0.98] ${
             isLeading
-              ? 'bg-emerald-600 text-white cursor-default shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-black shadow-[0_0_25px_rgba(16,185,129,0.4)] hover:opacity-95'
               : 'neon-bg-orange text-black hover:opacity-95'
           }`}
         >
@@ -264,7 +258,7 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
           ) : isLeading ? (
             <>
               <Trophy className="w-5 h-5" />
-              <span>You Hold the Winning Bid!</span>
+              <span>Leading! Tap to Boost Pool ({bidCost} Coins)</span>
             </>
           ) : (
             <>
