@@ -17,8 +17,8 @@ interface Props {
 }
 
 export const EarnView: React.FC<Props> = ({
-  ads,
-  tasks,
+  ads = [],
+  tasks = [],
   onAdCompleted,
   onTaskSubmitted,
 }) => {
@@ -26,8 +26,11 @@ export const EarnView: React.FC<Props> = ({
   const [selectedAd, setSelectedAd] = useState<Advertisement | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const availableAds = ads.filter((a) => !a.already_completed);
-  const completedAds = ads.filter((a) => a.already_completed);
+  const safeAds = Array.isArray(ads) ? ads : [];
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+
+  const availableAds = safeAds.filter((a) => !a.already_completed);
+  const completedAds = safeAds.filter((a) => a.already_completed);
 
   return (
     <div className="space-y-4 pb-24 animate-in fade-in duration-200">
@@ -60,7 +63,7 @@ export const EarnView: React.FC<Props> = ({
           }`}
         >
           <CheckSquare className="w-4 h-4" />
-          <span>Tasks ({tasks.length})</span>
+          <span>Tasks ({safeTasks.length})</span>
         </button>
       </div>
 
@@ -171,13 +174,13 @@ export const EarnView: React.FC<Props> = ({
       {/* TASKS TAB */}
       {subTab === 'tasks' && (
         <div className="space-y-3">
-          {tasks.length === 0 ? (
+          {safeTasks.length === 0 ? (
             <div className="py-16 text-center text-white/40">
               <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs">No active tasks right now.</p>
             </div>
           ) : (
-            tasks.map((task) => {
+            safeTasks.map((task) => {
               const submission = task.user_submission;
               const isApproved = submission?.status === 'approved';
               const isPending = submission?.status === 'pending';

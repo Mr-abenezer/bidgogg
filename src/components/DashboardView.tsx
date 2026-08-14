@@ -39,13 +39,22 @@ export const DashboardView: React.FC<Props> = ({
   wallet,
   settings,
   activeRound,
-  recentTransactions,
-  availableAdsCount,
-  availableTasksCount,
+  recentTransactions = [],
+  availableAdsCount = 0,
+  availableTasksCount = 0,
   onNavigate,
 }) => {
-  const usdtEquivalent = (wallet.coin_balance * (settings.coin_to_usdt_rate || 0.0006)).toFixed(4);
-  const totalEarnedUsdt = (wallet.total_earned * (settings.coin_to_usdt_rate || 0.0006)).toFixed(2);
+  const safeTransactions = Array.isArray(recentTransactions) ? recentTransactions : [];
+  const rate = Number(settings?.coin_to_usdt_rate || 0.0006);
+  const coinBalance = Number(wallet?.coin_balance || 0);
+  const todayEarned = Number(wallet?.today_earned || 0);
+  const totalEarned = Number(wallet?.total_earned || 0);
+  const adReward = Number(settings?.ad_reward || 5);
+  const taskReward = Number(settings?.task_reward || 20);
+  const winnerPct = Number(settings?.winner_percentage || 85);
+  const minWdCoins = Number(settings?.min_withdrawal_coins || 300);
+
+  const usdtEquivalent = (coinBalance * rate).toFixed(4);
 
   return (
     <div className="space-y-5 pb-24 animate-in fade-in duration-200">
@@ -62,14 +71,14 @@ export const DashboardView: React.FC<Props> = ({
               Available Coin Balance
             </span>
             <span className="text-[10px] font-mono font-bold bg-[#F27D26]/10 border border-[#F27D26]/30 text-[#F27D26] px-2 py-0.5 rounded-full">
-              1 Coin = {settings.coin_to_usdt_rate} USDT
+              1 Coin = {rate} USDT
             </span>
           </div>
 
           {/* Big Balance */}
           <div className="flex items-baseline gap-2 mb-1">
             <h1 className="text-4xl font-extrabold font-mono text-[#F0F0F0] tracking-tight">
-              {wallet.coin_balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+              {coinBalance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
             </h1>
             <span className="text-lg font-bold text-[#F27D26] font-sans">Coins</span>
           </div>
@@ -86,7 +95,7 @@ export const DashboardView: React.FC<Props> = ({
                 <span>Today's Earnings</span>
               </div>
               <div className="text-sm font-bold font-mono text-emerald-400">
-                +{wallet.today_earned.toLocaleString()} Coins
+                +{todayEarned.toLocaleString()} Coins
               </div>
             </div>
 
@@ -96,7 +105,7 @@ export const DashboardView: React.FC<Props> = ({
                 <span>Total Earned</span>
               </div>
               <div className="text-sm font-bold font-mono text-[#F27D26]">
-                {wallet.total_earned.toLocaleString()} Coins
+                {totalEarned.toLocaleString()} Coins
               </div>
             </div>
           </div>
@@ -122,7 +131,7 @@ export const DashboardView: React.FC<Props> = ({
               <Zap className="w-5 h-5 fill-[#F27D26]/20" />
             </div>
             <span className="text-xs font-bold text-[#F0F0F0]">Watch Ads</span>
-            <span className="text-[10px] text-[#F27D26] font-semibold mt-0.5">+{settings.ad_reward} Coins</span>
+            <span className="text-[10px] text-[#F27D26] font-semibold mt-0.5">+{adReward} Coins</span>
           </button>
 
           {/* Tasks */}
@@ -137,7 +146,7 @@ export const DashboardView: React.FC<Props> = ({
               <CheckSquare className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-[#F0F0F0]">Tasks</span>
-            <span className="text-[10px] text-sky-400 font-semibold mt-0.5">+{settings.task_reward} Coins</span>
+            <span className="text-[10px] text-sky-400 font-semibold mt-0.5">+{taskReward} Coins</span>
           </button>
 
           {/* Bid & Win */}
@@ -152,7 +161,7 @@ export const DashboardView: React.FC<Props> = ({
               <Flame className="w-5 h-5 fill-red-400/20 animate-pulse" />
             </div>
             <span className="text-xs font-bold text-[#F0F0F0]">Bid & Win</span>
-            <span className="text-[10px] text-red-400 font-semibold mt-0.5">{settings.winner_percentage}% Pool</span>
+            <span className="text-[10px] text-red-400 font-semibold mt-0.5">{winnerPct}% Pool</span>
           </button>
 
           {/* Post Ad / Campaign */}
@@ -184,7 +193,7 @@ export const DashboardView: React.FC<Props> = ({
               </div>
               <div className="text-left">
                 <div className="text-xs font-bold text-[#F0F0F0]">Withdraw USDT</div>
-                <div className="text-[10px] text-white/40">Min {settings.min_withdrawal_coins} Coins</div>
+                <div className="text-[10px] text-white/40">Min {minWdCoins} Coins</div>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
@@ -259,13 +268,13 @@ export const DashboardView: React.FC<Props> = ({
           </button>
         </div>
 
-        {recentTransactions.length === 0 ? (
+        {safeTransactions.length === 0 ? (
           <div className="p-6 rounded-2xl glass-card text-center text-white/40 text-xs">
             No transactions yet. Start earning Coins today!
           </div>
         ) : (
           <div className="space-y-2">
-            {recentTransactions.slice(0, 4).map((tx) => {
+            {safeTransactions.slice(0, 4).map((tx) => {
               const isCredit = tx.amount > 0;
               return (
                 <div

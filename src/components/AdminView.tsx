@@ -81,19 +81,29 @@ export const AdminView: React.FC<Props> = ({ onRefreshAll }) => {
         if (res.success && res.data) setAnalytics(res.data);
       } else if (section === 'users') {
         const res = await api.admin.getUsers(userSearch);
-        if (res.success && res.data) setUsers(res.data.users);
+        if (res.success && res.data) {
+          setUsers(Array.isArray(res.data.users) ? res.data.users : []);
+        }
       } else if (section === 'tasks') {
         const res = await api.admin.getTaskSubmissions('all');
-        if (res.success && res.data) setSubmissions(res.data);
+        if (res.success && res.data) {
+          setSubmissions(Array.isArray(res.data) ? res.data : []);
+        }
       } else if (section === 'campaigns') {
         const res = await api.admin.getCampaigns();
-        if (res.success && res.data) setCampaigns(res.data);
+        if (res.success && res.data) {
+          setCampaigns(Array.isArray(res.data) ? res.data : []);
+        }
       } else if (section === 'bid') {
         const res = await api.admin.getBidRounds();
-        if (res.success && res.data) setBidRounds(res.data);
+        if (res.success && res.data) {
+          setBidRounds(Array.isArray(res.data) ? res.data : []);
+        }
       } else if (section === 'withdrawals') {
         const res = await api.admin.getWithdrawals('all');
-        if (res.success && res.data) setWithdrawals(res.data);
+        if (res.success && res.data) {
+          setWithdrawals(Array.isArray(res.data) ? res.data : []);
+        }
       } else if (section === 'settings') {
         const res = await api.getSettings();
         if (res.success && res.data) setSettings(res.data);

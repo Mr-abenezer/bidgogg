@@ -33,25 +33,29 @@ export const CampaignsView: React.FC<Props> = ({
   user,
   wallet,
   settings,
-  activeCampaigns,
-  myCampaigns,
+  activeCampaigns = [],
+  myCampaigns = [],
   onCampaignCreated,
 }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'my' | 'browse'>('create');
+
+  const safeActiveCampaigns = Array.isArray(activeCampaigns) ? activeCampaigns : [];
+  const safeMyCampaigns = Array.isArray(myCampaigns) ? myCampaigns : [];
+  const cpc = Number(settings?.click_price || 5.0);
+  const minBudget = Number(settings?.min_campaign_budget || 50.0);
+  const coinBalance = Number(wallet?.coin_balance || 0);
 
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [destinationUrl, setDestinationUrl] = useState('');
-  const [budget, setBudget] = useState<number>(100);
+  const [budget, setBudget] = useState<number>(minBudget);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const cpc = settings.click_price || 5.0;
-  const minBudget = settings.min_campaign_budget || 50.0;
-  const estimatedClicks = Math.floor((budget || 0) / cpc);
+  const estimatedClicks = Math.floor((Number(budget) || 0) / cpc);
 
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,8 +69,8 @@ export const CampaignsView: React.FC<Props> = ({
       return;
     }
 
-    if (wallet.coin_balance < budget) {
-      setError(`Insufficient Coin balance. You have ${wallet.coin_balance} Coins, needed ${budget} Coins.`);
+    if (coinBalance < budget) {
+      setError(`Insufficient Coin balance. You have ${coinBalance} Coins, needed ${budget} Coins.`);
       return;
     }
 
@@ -92,7 +96,7 @@ export const CampaignsView: React.FC<Props> = ({
         setDescription('');
         setImageUrl('');
         setDestinationUrl('');
-        setBudget(100);
+        setBudget(minBudget);
         onCampaignCreated(res.data);
         setActiveTab('my');
       } else {
@@ -146,7 +150,7 @@ export const CampaignsView: React.FC<Props> = ({
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>My Campaigns ({myCampaigns.length})</span>
+          <span>My Campaigns ({safeMyCampaigns.length})</span>
         </button>
 
         <button
@@ -161,7 +165,7 @@ export const CampaignsView: React.FC<Props> = ({
           }`}
         >
           <Megaphone className="w-4 h-4" />
-          <span>Explore ({activeCampaigns.length})</span>
+          <span>Explore ({safeActiveCampaigns.length})</span>
         </button>
       </div>
 
@@ -293,7 +297,7 @@ export const CampaignsView: React.FC<Props> = ({
       {/* 2. MY CAMPAIGNS TAB */}
       {activeTab === 'my' && (
         <div className="space-y-3">
-          {myCampaigns.length === 0 ? (
+          {safeMyCampaigns.length === 0 ? (
             <div className="py-16 text-center text-white/40 glass-card rounded-3xl p-8">
               <Megaphone className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs mb-3">You have not created any advertising campaigns yet.</p>
@@ -305,7 +309,7 @@ export const CampaignsView: React.FC<Props> = ({
               </button>
             </div>
           ) : (
-            myCampaigns.map((c) => (
+            safeMyCampaigns.map((c) => (
               <div key={c.id} className="p-4 rounded-3xl glass-card space-y-3 shadow-md">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -357,13 +361,13 @@ export const CampaignsView: React.FC<Props> = ({
       {/* 3. BROWSE ACTIVE ADVERTISER CAMPAIGNS */}
       {activeTab === 'browse' && (
         <div className="space-y-3">
-          {activeCampaigns.length === 0 ? (
+          {safeActiveCampaigns.length === 0 ? (
             <div className="py-16 text-center text-white/40 glass-card rounded-3xl p-8">
               <Megaphone className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs">No active user campaigns right now.</p>
             </div>
           ) : (
-            activeCampaigns.map((c) => (
+            safeActiveCampaigns.map((c) => (
               <div
                 key={c.id}
                 onClick={() => handleCampaignClick(c)}

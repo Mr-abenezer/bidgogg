@@ -29,6 +29,7 @@ import { CampaignsView } from './components/CampaignsView';
 import { WalletView } from './components/WalletView';
 import { AdminView } from './components/AdminView';
 import { NotificationDrawer } from './components/NotificationDrawer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { RefreshCw, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [settings, setSettings] = useState<PlatformSettings>({
+    id: 1,
     ad_reward: 5.0,
     task_reward: 10.0,
     click_price: 5.0,
@@ -54,6 +56,7 @@ export default function App() {
     coin_to_usdt_rate: 0.0006,
     min_withdrawal_coins: 300,
     maintenance_mode: false,
+    updated_at: new Date().toISOString(),
   });
 
   const [ads, setAds] = useState<Advertisement[]>([]);
@@ -259,75 +262,77 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="max-w-md mx-auto px-4 pt-4 min-h-[calc(100vh-130px)]">
-        {activeTab === 'home' && (
-          <DashboardView
-            user={user}
-            wallet={wallet}
-            settings={settings}
-            activeRound={activeRound}
-            recentTransactions={transactions}
-            availableAdsCount={ads.filter((a) => !a.already_completed).length}
-            availableTasksCount={tasks.length}
-            onNavigate={(tab) => setActiveTab(tab)}
-          />
-        )}
+        <ErrorBoundary fallbackTab={() => setActiveTab('home')}>
+          {activeTab === 'home' && (
+            <DashboardView
+              user={user}
+              wallet={wallet}
+              settings={settings}
+              activeRound={activeRound}
+              recentTransactions={transactions}
+              availableAdsCount={ads.filter((a) => !a.already_completed).length}
+              availableTasksCount={tasks.length}
+              onNavigate={(tab) => setActiveTab(tab)}
+            />
+          )}
 
-        {activeTab === 'earn' && (
-          <EarnView
-            ads={ads}
-            tasks={tasks}
-            onAdCompleted={(reward, newBal) => {
-              setWallet((prev) => (prev ? { ...prev, coin_balance: newBal, today_earned: prev.today_earned + reward, total_earned: prev.total_earned + reward } : prev));
-              loadAppData();
-            }}
-            onTaskSubmitted={() => {
-              loadAppData();
-            }}
-          />
-        )}
+          {activeTab === 'earn' && (
+            <EarnView
+              ads={ads}
+              tasks={tasks}
+              onAdCompleted={(reward, newBal) => {
+                setWallet((prev) => (prev ? { ...prev, coin_balance: newBal, today_earned: prev.today_earned + reward, total_earned: prev.total_earned + reward } : prev));
+                loadAppData();
+              }}
+              onTaskSubmitted={() => {
+                loadAppData();
+              }}
+            />
+          )}
 
-        {activeTab === 'bid' && (
-          <BidWinView
-            user={user}
-            wallet={wallet}
-            onBalanceUpdated={(newBal) => {
-              setWallet((prev) => (prev ? { ...prev, coin_balance: newBal } : prev));
-              loadAppData();
-            }}
-          />
-        )}
+          {activeTab === 'bid' && (
+            <BidWinView
+              user={user}
+              wallet={wallet}
+              onBalanceUpdated={(newBal) => {
+                setWallet((prev) => (prev ? { ...prev, coin_balance: newBal } : prev));
+                loadAppData();
+              }}
+            />
+          )}
 
-        {activeTab === 'campaigns' && (
-          <CampaignsView
-            user={user}
-            wallet={wallet}
-            settings={settings}
-            activeCampaigns={activeCampaigns}
-            myCampaigns={myCampaigns}
-            onCampaignCreated={(camp) => {
-              setMyCampaigns((prev) => [camp, ...prev]);
-              loadAppData();
-            }}
-          />
-        )}
+          {activeTab === 'campaigns' && (
+            <CampaignsView
+              user={user}
+              wallet={wallet}
+              settings={settings}
+              activeCampaigns={activeCampaigns}
+              myCampaigns={myCampaigns}
+              onCampaignCreated={(camp) => {
+                setMyCampaigns((prev) => [camp, ...prev]);
+                loadAppData();
+              }}
+            />
+          )}
 
-        {activeTab === 'wallet' && (
-          <WalletView
-            user={user}
-            wallet={wallet}
-            settings={settings}
-            withdrawals={withdrawals}
-            transactions={transactions}
-            onWithdrawalRequested={(wd) => {
-              setWithdrawals((prev) => [wd, ...prev]);
-              loadAppData();
-            }}
-          />
-        )}
+          {activeTab === 'wallet' && (
+            <WalletView
+              user={user}
+              wallet={wallet}
+              settings={settings}
+              withdrawals={withdrawals}
+              transactions={transactions}
+              onWithdrawalRequested={(wd) => {
+                setWithdrawals((prev) => [wd, ...prev]);
+                loadAppData();
+              }}
+            />
+          )}
 
-        {activeTab === 'admin' && user.is_admin && (
-          <AdminView onRefreshAll={loadAppData} />
-        )}
+          {activeTab === 'admin' && (
+            <AdminView onRefreshAll={loadAppData} />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Bottom Navigation */}

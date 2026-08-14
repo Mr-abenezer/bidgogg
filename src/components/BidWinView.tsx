@@ -63,8 +63,11 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
   const handlePlaceBid = async () => {
     if (!round || isBidding) return;
 
-    if (wallet.coin_balance < round.bid_cost) {
-      setError(`Insufficient Coins. You need ${round.bid_cost} Coins to place a bid.`);
+    const availableBalance = Number(wallet?.coin_balance || 0);
+    const cost = Number(round?.bid_cost || 10);
+
+    if (availableBalance < cost) {
+      setError(`Insufficient Coins. You need ${cost} Coins to place a bid.`);
       haptic.error();
       return;
     }
@@ -86,13 +89,17 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
         onBalanceUpdated(res.data.balance);
         haptic.success();
 
-        // Play quick burst
-        confetti({
-          particleCount: 35,
-          spread: 50,
-          origin: { y: 0.8 },
-          colors: ['#ef4444', '#eab308', '#38bdf8'],
-        });
+        // Play quick burst safely
+        try {
+          confetti({
+            particleCount: 35,
+            spread: 50,
+            origin: { y: 0.8 },
+            colors: ['#ef4444', '#eab308', '#38bdf8'],
+          });
+        } catch (e) {
+          // ignore canvas-confetti issues if any
+        }
 
         fetchRoundState();
       } else {
@@ -117,6 +124,9 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
   const totalTimerSeconds = round?.timer_seconds || 60;
   const progressRatio = Math.max(0, Math.min(1, secondsRemaining / totalTimerSeconds));
   const strokeDashoffset = 283 * (1 - progressRatio); // 2 * PI * 45 ≈ 283
+
+  const safeBids = Array.isArray(bids) ? bids : [];
+  const safeRecentWinners = Array.isArray(recentWinners) ? recentWinners : [];
 
   return (
     <div className="space-y-4 pb-24 animate-in fade-in duration-200">
@@ -274,18 +284,18 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
             <History className="w-4 h-4 text-sky-400" />
-            Live Bid History (Round #{round?.round_number})
+            Live Bid History (Round #{round?.round_number || 1})
           </h3>
-          <span className="text-[10px] font-mono text-white/40">{bids.length} bids</span>
+          <span className="text-[10px] font-mono text-white/40">{safeBids.length} bids</span>
         </div>
 
-        {bids.length === 0 ? (
+        {safeBids.length === 0 ? (
           <div className="py-8 text-center text-white/40 text-xs">
             No bids in this round yet. Be the first to bid and lead the pool!
           </div>
         ) : (
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {bids.map((b, idx) => (
+            {safeBids.map((b, idx) => (
               <div
                 key={b.id}
                 className={`p-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ${
@@ -295,7 +305,7 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-white/40">#{bids.length - idx}</span>
+                  <span className="text-[10px] font-mono text-white/40">#{safeBids.length - idx}</span>
                   <span className="font-bold text-[#F0F0F0]">
                     {b.first_name || (b.username ? `@${b.username}` : 'Bidder')}
                   </span>
@@ -317,7 +327,7 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
       </div>
 
       {/* 3. Recent Round Winners (Hall of Fame) */}
-      {recentWinners.length > 0 && (
+      {safeRecentWinners.length > 0 && (
         <div className="rounded-3xl glass-card p-5">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/40 flex items-center gap-2 mb-3">
             <Trophy className="w-4 h-4 text-[#F27D26]" />
@@ -325,7 +335,7 @@ export const BidWinView: React.FC<Props> = ({ user, wallet, onBalanceUpdated }) 
           </h3>
 
           <div className="space-y-2">
-            {recentWinners.map((w) => (
+            {safeRecentWinners.map((w) => (
               <div
                 key={w.id}
                 className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between"

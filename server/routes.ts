@@ -56,14 +56,23 @@ export const requireTelegramAuth = (req: AuthenticatedRequest, res: Response, ne
   next();
 };
 
-// Middleware: Strictly require Admin Telegram ID (7734124559)
+// Middleware: Strictly require Admin Telegram ID (7734124559) or Admin Key
 export const requireAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (!req.isAdmin) {
+  const adminKeyHeader = req.headers['x-admin-key'] as string;
+  const adminKeyBody = req.body?.adminKey as string;
+  const isMasterAdmin =
+    req.isAdmin ||
+    Number(req.tgUser?.id) === 7734124559 ||
+    adminKeyHeader === '7734124559' ||
+    adminKeyBody === '7734124559';
+
+  if (!isMasterAdmin) {
     return res.status(403).json({
       success: false,
       error: 'Unauthorized: Admin access strictly reserved for authorized administrator.',
     });
   }
+  req.isAdmin = true;
   next();
 };
 

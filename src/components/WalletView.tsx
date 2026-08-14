@@ -34,25 +34,29 @@ export const WalletView: React.FC<Props> = ({
   user,
   wallet,
   settings,
-  withdrawals,
-  transactions,
+  withdrawals = [],
+  transactions = [],
   onWithdrawalRequested,
 }) => {
   const [subTab, setSubTab] = useState<'withdraw' | 'history' | 'ledger'>('withdraw');
 
-  // Withdrawal Form State
-  const minCoins = settings.min_withdrawal_coins || 300;
-  const rate = settings.coin_to_usdt_rate || 0.0006;
+  // Safe defaults
+  const safeWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const minCoins = Number(settings?.min_withdrawal_coins || 300);
+  const rate = Number(settings?.coin_to_usdt_rate || 0.0006);
+  const coinBalance = Number(wallet?.coin_balance || 0);
+  const reservedBalance = Number(wallet?.reserved_balance || 0);
 
-  const [coinAmount, setCoinAmount] = useState<number>(300);
+  const [coinAmount, setCoinAmount] = useState<number>(minCoins);
   const [network, setNetwork] = useState<string>('USDT (BEP20)');
   const [walletAddress, setWalletAddress] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const usdtEquivalent = Number(((coinAmount || 0) * rate).toFixed(4));
-  const availableCoins = wallet.coin_balance;
+  const usdtEquivalent = Number(((Number(coinAmount) || 0) * rate).toFixed(4));
+  const availableCoins = coinBalance;
 
   const handleSetAmount = (val: number) => {
     haptic.selection();
@@ -165,21 +169,21 @@ export const WalletView: React.FC<Props> = ({
 
         <div className="flex items-baseline gap-2 mb-1">
           <h2 className="text-3xl font-extrabold font-mono text-[#F0F0F0] tracking-tight">
-            {wallet.coin_balance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            {coinBalance.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </h2>
           <span className="text-base font-bold text-[#F27D26] font-sans">Coins</span>
         </div>
 
         <p className="text-xs text-white/40 font-mono mb-4">
-          ≈ <span className="text-white font-semibold">${(wallet.coin_balance * rate).toFixed(4)} USDT</span> equivalent
+          ≈ <span className="text-white font-semibold">${(coinBalance * rate).toFixed(4)} USDT</span> equivalent
         </p>
 
         {/* Reserved balance if any */}
-        {wallet.reserved_balance > 0 && (
+        {reservedBalance > 0 && (
           <div className="flex items-center gap-2 p-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-[#F27D26] font-mono">
             <Lock className="w-3.5 h-3.5 flex-shrink-0" />
             <span>
-              {wallet.reserved_balance} Coins reserved in pending withdrawals/campaigns
+              {reservedBalance} Coins reserved in pending withdrawals/campaigns
             </span>
           </div>
         )}
@@ -212,7 +216,7 @@ export const WalletView: React.FC<Props> = ({
               : 'text-white/40 hover:text-white/70'
           }`}
         >
-          Withdrawals ({withdrawals.length})
+          Withdrawals ({safeWithdrawals.length})
         </button>
 
         <button
@@ -353,13 +357,13 @@ export const WalletView: React.FC<Props> = ({
       {/* 3. WITHDRAWAL HISTORY */}
       {subTab === 'history' && (
         <div className="space-y-3">
-          {withdrawals.length === 0 ? (
+          {safeWithdrawals.length === 0 ? (
             <div className="py-16 text-center text-white/40 glass-card rounded-3xl p-8">
               <ArrowUpRight className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs">No withdrawal requests yet.</p>
             </div>
           ) : (
-            withdrawals.map((w) => (
+            safeWithdrawals.map((w) => (
               <div key={w.id} className="p-4 rounded-3xl glass-card space-y-3 shadow-md">
                 <div className="flex items-start justify-between gap-2">
                   <div>
@@ -399,13 +403,13 @@ export const WalletView: React.FC<Props> = ({
       {/* 4. TRANSACTION LEDGER */}
       {subTab === 'ledger' && (
         <div className="space-y-2">
-          {transactions.length === 0 ? (
+          {safeTransactions.length === 0 ? (
             <div className="py-16 text-center text-white/40 glass-card rounded-3xl p-8">
               <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="text-xs">No transactions recorded yet.</p>
             </div>
           ) : (
-            transactions.map((tx) => {
+            safeTransactions.map((tx) => {
               const isCredit = tx.amount > 0;
               return (
                 <div
